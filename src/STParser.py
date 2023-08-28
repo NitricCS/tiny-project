@@ -8,14 +8,59 @@ from STLogger import STLogger
 
 class STParser(Parser):
     tokens = STLexer.tokens
+    token_dict = {}
     symbol_table = [[]]
 
-    def __init__ (self, log_path):
+    def __init__ (self, log_path, token_dict):
         self.logger = STLogger(log_path)              # a path to save the results to
+        self.token_dict = token_dict
+    
+    # Syntax error handling
+    def error(self, p):
+        if not p:
+            print("End of File!")
+            return
 
+        if p.type == 'SEMICOLON':
+            i = self.get_prev_index(p.index)
+            if self.token_dict[i][0] == 'IDENTIFIER':
+                i = self.get_prev_index(i)
+                if self.token_dict[i][0] == 'COMMA' or self.token_dict[i][0] == 'INT_KW' or self.token_dict[i][0] == 'FLOAT_KW' or self.token_dict[i][0] == 'CHAR_KW' or self.token_dict[i][0] == 'BOOL_KW':
+                    print ("Error in line " + str(p.lineno) +  ": Global variables are not allowed. Token: " + p.type)
+            self.errok()
+            self.restart()
+        elif p.type == 'INT_KW' or p.type == 'FLOAT_KW' or p.type == 'CHAR_KW' or p.type == 'BOOL_KW':
+            print("Error in line " + str(p.lineno) +  ": Declarations should be in the beginning. Token: " + p.type)
+            self.errok()
+            self.restart()
+        elif p.type == 'ASSIGNMENT_OP':
+            i = self.get_prev_index(p.index)
+            i = self.get_prev_index(i)
+            if self.token_dict[i][0] == 'COMMA' or self.token_dict[i][0] == 'INT_KW' or self.token_dict[i][0] == 'FLOAT_KW' or self.token_dict[i][0] == 'CHAR_KW' or self.token_dict[i][0] == 'BOOL_KW':
+                print("Error in line " + str(p.lineno) +  ": Variables can't be initialized on declaration. Token: " + p.type)
+            self.errok()
+            self.restart()
+        else:
+            print ("Undefined syntax error in line " + str(p.lineno) + ". Token: " + p.type)
+            self.errok()
+            self.restart()
+    
+    def get_prev_index(self, index):
+        i = index
+        while True:
+                i = i - 1
+                if i in self.token_dict:
+                    return i
+                if i == -1:
+                    return -1
+    
     ### Grammar Description Below ###
     @_('functions')
     def program(self, p):
+        global_scope = self.symbol_table[0]
+        last_func = global_scope[len(global_scope)-1]
+        if 'main' not in last_func[0]:
+            self.logger.log_main_error()
         self.logger.save_scope(self.symbol_table.pop())
         self.logger.make_log()
         return p.functions
@@ -24,9 +69,9 @@ class STParser(Parser):
     @_('{ function }')
     def functions(self, p):
         return p[0]
-    
+
     @_('INT_KW MAIN_KW LP RP open_scope LCB declarations statements RCB close_scope',
-       'vartype IDENTIFIER open_scope internal_decl LCB declarations statements RCB close_scope')
+       'vartype IDENTIFIER open_scope LP [ internal_decl ] RP LCB declarations statements RCB close_scope')
     def function(self, p):
         self.insert( (p[1], p.lineno) )
         return (p[0], p[1])
@@ -38,9 +83,9 @@ class STParser(Parser):
         self.logger.save_scope(self.symbol_table.pop())
     
     # Function parameters declaration
-    @_('LP vartype ext_id [ { COMMA vartype ext_id } ] RP')
+    @_('vartype ext_id [ { COMMA vartype ext_id } ]')
     def internal_decl(self, p):
-        ids = self.get_func_params(p[2], p[3], p.lineno)
+        ids = self.get_func_params(p[1], p[2], p.lineno)
         for id in ids:
             self.insert ( (id, p.lineno) )
     
@@ -261,10 +306,14 @@ class STParser(Parser):
 
 if __name__ == "__main__":
     lexer = STLexer()
-    parser = STParser("./symbol_table.log")
-
+    
     data = open("./samples/program.tiny").read()
 
     s = lexer.tokenize(data)
+    s1 = lexer.tokenize(data)
+    td = {}
+    for t in s1:
+        td[t.index] = (t.type, t.value)
+    parser = STParser("./symbol_table.log", td)
     p = parser.parse(s)
     print (p)

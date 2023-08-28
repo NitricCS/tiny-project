@@ -1,4 +1,4 @@
-# Symbol Table Implementation with SLY
+# Parser and Type System for Tiny
 This project builds a **symbol table** and provides **variable resolutions** for a code written in simplified C.\
 It parses the code using a basic grammar and creates a symbol table using **static scoping**.
 

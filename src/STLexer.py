@@ -75,6 +75,12 @@ class STLexer(Lexer):
 if __name__ == "__main__":
     data = open("./samples/program.tiny").read()
     lexer = STLexer()
+    
     s = lexer.tokenize(data)
+    
+    # for tok in s:
+    #     print('index=%r, type=%r, value=%r' % (tok.index, tok.type, tok.value))
+    token_dict = {}
     for tok in s:
-        print('type=%r, value=%r' % (tok.type, tok.value))
+        token_dict[tok.index] = (tok.type, tok.value)
+    print(token_dict)

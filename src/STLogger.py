@@ -31,6 +31,10 @@ class STLogger():
         new_log = "ERROR: Duplicate declaration of reference " + variable + " in current scope (line " + str(line) + ")\n"
         self.err_log = self.err_log + new_log
     
+    def log_main_error(self):
+        new_log = "ERROR: main() function isn't declared or isn't last"
+        self.err_log = self.err_log + new_log
+    
     def make_log(self):
         f = open(self.path, "w", encoding="utf-8")
         for scope in self.table_ostream:
