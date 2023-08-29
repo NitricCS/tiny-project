@@ -32,7 +32,7 @@ class STLogger():
         self.err_log = self.err_log + new_log
     
     def log_main_error(self):
-        new_log = "ERROR: main() function isn't declared or isn't last"
+        new_log = "ERROR: main() function isn't declared or isn't last\n"
         self.err_log = self.err_log + new_log
     
     def make_log(self):
