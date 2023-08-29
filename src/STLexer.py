@@ -7,7 +7,7 @@ from sly import Lexer
 class STLexer(Lexer):
     tokens = {
         IF_KW, ELSE_KW, WHILE_KW, CONST_CHAR, CONST_NUMBER,
-        PLUS_OP, MINUS_OP, MULTIPLY_OP, DIVIDE_OP, MOD_OP,
+        PLUS_OP, MINUS_OP, MULTIPLY_OP, DIVIDE_OP,
         LP, LCB, RP, RCB, LSB, RSB,
         INT_KW, FLOAT_KW, CHAR_KW, BOOL_KW,
         TRUE_KW, FALSE_KW,
@@ -29,7 +29,6 @@ class STLexer(Lexer):
     MINUS_OP = r'\-'
     MULTIPLY_OP = r'\*'
     DIVIDE_OP = r'\/'
-    MOD_OP = r'\%'
     LP = r'\('
     LCB = r'\{'
     RP = r'\)'

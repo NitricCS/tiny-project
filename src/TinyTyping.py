@@ -18,6 +18,19 @@ class TinyTyping():
         else:
             return "char"
     
+    def overflow_check_assign(self, vartype, value):
+        match vartype:
+            case "int":
+                if int(value) > 65535 or int(value) < 0:
+                    return True
+            case "float":
+                if float(value) > 3.402823466e+38 or float(value) < 1.175494351e-38:
+                    return True
+            case "char":
+                if ord(value) > 255 or ord(value) < 32:
+                    return True
+        return False
+
     def overflow_check(self, vartype, value1, value2, operator):
         match vartype:
             case "int":

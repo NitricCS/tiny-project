@@ -3,15 +3,19 @@
 # Kirill Borisov, 108144
 
 from sly import Parser
-from STLexer import STLexer
-from STLogger import STLogger
-from TinyTyping import TinyTyping
+from src.STLexer import STLexer
+from src.STLogger import STLogger
+from src.TinyTyping import TinyTyping
+from src.SlyLogger import SlyLogger
 
 class STParser(Parser):
     tokens = STLexer.tokens
-    token_dict = {}
     symbol_table = [[]]
+    token_dict = {}
     varvalues = {}
+    err = False
+    err_defined = False
+    log = SlyLogger(open("./sysout.log", "w"))
 
     def __init__ (self, log_path, token_dict):
         self.logger = STLogger(log_path)              # a path to save the results to
@@ -20,11 +24,13 @@ class STParser(Parser):
     
     # Syntax error handling
     def error(self, p):
+        self.err = True
         if not p:
             print("End of File!")
             return
 
         if p.type == 'SEMICOLON':
+            self.err_defined = True
             i = self.get_prev_index(p.index)
             if self.token_dict[i][0] == 'IDENTIFIER':
                 i = self.get_prev_index(i)
@@ -33,17 +39,20 @@ class STParser(Parser):
             self.errok()
             self.restart()
         elif p.type == 'INT_KW' or p.type == 'FLOAT_KW' or p.type == 'CHAR_KW' or p.type == 'BOOL_KW':
-            self.logger.log_syntax_error("init", p.lineno)
+            self.err_defined = True
+            self.logger.log_syntax_error("decl", p.lineno)
             self.errok()
             self.restart()
         elif p.type == 'ASSIGNMENT_OP':
+            self.err_defined = True
             i = self.get_prev_index(self.get_prev_index(p.index))
             if self.token_dict[i][0] == 'COMMA' or self.token_dict[i][0] == 'INT_KW' or self.token_dict[i][0] == 'FLOAT_KW' or self.token_dict[i][0] == 'CHAR_KW' or self.token_dict[i][0] == 'BOOL_KW':
-                self.logger.log_syntax_error("decl", p.lineno)
+                self.logger.log_syntax_error("init", p.lineno)
             self.errok()
             self.restart()
         else:
-            self.logger.log_syntax_error("generic", p.lineno)
+            if not self.err_defined:
+                self.logger.log_syntax_error("generic", p.lineno)
             self.errok()
             self.restart()
     
@@ -60,10 +69,11 @@ class STParser(Parser):
     @_('functions')
     def program(self, p):
         global_scope = list(reversed(self.symbol_table[0]))
-        if len(global_scope) == 0:
-            self.logger.log_main_error()
-        elif 'main' not in global_scope[0][1]:
-            self.logger.log_main_error()
+        if not self.err:
+            if len(global_scope) == 0:
+                self.logger.log_main_error()
+            elif 'main' not in global_scope[0][1]:
+                self.logger.log_main_error()
         self.logger.save_scope(self.symbol_table.pop())
         self.logger.make_log()
         return p.functions
@@ -150,32 +160,39 @@ class STParser(Parser):
     # Assignment statement
     @_('ext_id ASSIGNMENT_OP bin_expression')
     def assignment(self, p):
-        self.lookup_id(p.ext_id, p.lineno)
+        ref = self.lookup_id(p.ext_id, p.lineno)
+        if not ref:
+            return p[0]
+        
         type0 = self.lookup_type(p.ext_id[0])
         if p[2][3] == "var":                      # only checking first operand
             type1 = self.lookup_type(p[2][0])
         if p[2][3] == "literal":
             type1 = self.typer.get_literal_type(p[2][0])
-        self.varvalues[p.ext_id[0]] = p[2][4]
         if not self.typer.is_of_same_type(type0, type1):
             self.logger.log_type_error(type0, type1, p.lineno)
+            return p[0]
+        
+        self.varvalues[p.ext_id[0]] = p[2][4]
+        return p[0]
 
     @_('ext_id ASSIGNMENT_OP rel_expression')
     def assignment(self, p):
-        self.lookup_id(p.ext_id, p.lineno)
+        ref = self.lookup_id(p.ext_id, p.lineno)
+        if not ref:
+            return p[0]
+        
         type0 = self.lookup_type(p.ext_id[0])
-        if p[2][3] == "var":                      # only checking first operand
-            type1 = self.lookup_type(p[2][0])
-        if p[2][3] == "literal":
-            type1 = self.typer.get_literal_type(p[2][0])
-        if not self.typer.is_of_same_type(type0, type1):
-            self.logger.log_type_error(type0, type1, p.lineno)
+        if type0 != "bool":
+            self.logger.log_type_error_rel(type0, p.lineno)
+        return p[0]
 
     @_('ext_id ASSIGNMENT_OP func_call')
     def assignment(self, p):
         ref = self.lookup_id(p.ext_id, p.lineno)
         if not ref:
-            return (p[0])
+            return p[0]
+        
         type0 = self.lookup_type(p.ext_id[0])
         type1 = self.lookup_type(p.func_call[0])
         if not self.typer.is_of_same_type(type0, type1):
@@ -188,24 +205,37 @@ class STParser(Parser):
         ref = self.lookup_id(p.ext_id, p.lineno)
         if not ref:
             return (p[0], p[2])
-        self.varvalues[p.ext_id[0]] = p.literal      # save value to hastable
+        
         type0 = self.lookup_type(p.ext_id[0])
         type1 = self.typer.get_literal_type(p.literal)
         if not self.typer.is_of_same_type(type0, type1):
             self.logger.log_type_error(type0, type1, p.lineno)
+            return (p[0], p[2])
+        
+        value = p.literal
+        if self.typer.overflow_check_assign(type1, value):
+            self.logger.log_overflow(type0, p.lineno)
+            self.varvalues[p.ext_id[0]] = -1
+            return (p[0], p[2])
+        
+        self.varvalues[p.ext_id[0]] = p.literal      # save value to hastable
         return (p[0], p[2])
-        # check for overflows !!!
     
     @_('ext_id ASSIGNMENT_OP ext_id')
     def assignment(self, p):
-        self.lookup_id(p.ext_id0, p.lineno)
-        self.lookup_id(p.ext_id1, p.lineno)
-        self.varvalues[p.ext_id0[0]] = self.varvalues[p.ext_id1[0]]      # save value to hastable
-        # add values to stack here
+        ref0 = self.lookup_id(p.ext_id0, p.lineno)
+        ref1 = self.lookup_id(p.ext_id1, p.lineno)
+        if not ref0 or not ref1:
+            return (p[0], p[2])
+        
         type0 = self.lookup_type(p.ext_id0[0])
         type1 = self.lookup_type(p.ext_id1[0])
         if not self.typer.is_of_same_type(type0, type1):
             self.logger.log_type_error(type0, type1, p.lineno)
+            return (p[0], p[2])
+        
+        self.varvalues[p.ext_id0[0]] = self.varvalues[p.ext_id1[0]]      # save value to hastable
+        return (p[0], p[2])
     
     # Return statement
     @_('RETURN_KW literal',
@@ -227,13 +257,17 @@ class STParser(Parser):
     # Binary expressions
     @_('ext_id bin_op ext_id')
     def bin_expression(self, p):
-        self.lookup_id(p.ext_id0, p.lineno)
-        self.lookup_id(p.ext_id1, p.lineno)
+        ref0 = self.lookup_id(p.ext_id0, p.lineno)
+        ref1 = self.lookup_id(p.ext_id1, p.lineno)
+        if not ref0 or not ref1:
+            return (p[0], p[1], p[2], 'var', -1)
+
         type0 = self.lookup_type(p.ext_id0[0])
         type1 = self.lookup_type(p.ext_id1[0])
         if not self.typer.is_of_same_type(type0, type1):
             self.logger.log_type_error(type0, type1, p.lineno)
-        # check for overflows
+            return (p[0], p[1], p[2], 'var', -1)
+
         try:
             value0 = self.varvalues[p.ext_id0[0]]
             value1 = self.varvalues[p.ext_id1[0]]
@@ -253,12 +287,16 @@ class STParser(Parser):
     
     @_('literal bin_op ext_id')
     def bin_expression(self, p):
-        self.lookup_id(p.ext_id, p.lineno)
+        ref = self.lookup_id(p.ext_id, p.lineno)
+        if not ref:
+            return (p[0], p[1], p[2], 'literal', -1)
+        
         type0 = self.typer.get_literal_type(p.literal)
         type1 = self.lookup_type(p.ext_id[0])
         if not self.typer.is_of_same_type(type0, type1):
             self.logger.log_type_error(type0, type1, p.lineno)
-        # check for overflows
+            return (p[0], p[1], p[2], 'var', -1)
+
         try:
             value = self.varvalues[p.ext_id[0]]
             if not value == -1:
@@ -277,12 +315,16 @@ class STParser(Parser):
     
     @_('ext_id bin_op literal')
     def bin_expression(self, p):
-        self.lookup_id(p.ext_id, p.lineno)
+        ref = self.lookup_id(p.ext_id, p.lineno)
+        if not ref:
+            return (p[0], p[1], p[2], 'literal', -1)
+        
         type0 = self.typer.get_literal_type(p.literal)
         type1 = self.lookup_type(p.ext_id[0])
         if not self.typer.is_of_same_type(type0, type1):
             self.logger.log_type_error(type0, type1, p.lineno)
-        # check for overflows
+            return (p[0], p[1], p[2], 'var', -1)
+        
         try:
             value = self.varvalues[p.ext_id[0]]
             if not value == -1:
@@ -305,7 +347,8 @@ class STParser(Parser):
         type1 = self.typer.get_literal_type(p.literal1)
         if not self.typer.is_of_same_type(type0, type1):
             self.logger.log_type_error(type0, type1, p.lineno)
-        # check for overflows
+            return (p[0], p[1], p[2], 'literal', -1)
+        
         if self.typer.overflow_check(type0, p.literal0, p.literal1, p.bin_op):
             self.logger.log_overflow(type0, p.lineno)
         res = self.typer.calculate(type0, p.literal0, p.literal1, p.bin_op)
@@ -314,9 +357,11 @@ class STParser(Parser):
     # Comparative expressions
     @_('ext_id rel_op ext_id')
     def rel_expression(self, p):
-        self.lookup_id(p.ext_id0, p.lineno)
-        self.lookup_id(p.ext_id1, p.lineno)
-        # check here that type(ext_id0)=type(ext_id1)
+        ref0 = self.lookup_id(p.ext_id0, p.lineno)
+        ref1 = self.lookup_id(p.ext_id1, p.lineno)
+        if not ref0 or not ref1:
+            return (p[0], p[1], p[2])
+
         type0 = self.lookup_type(p.ext_id0[0])
         type1 = self.lookup_type(p.ext_id1[0])
         if not self.typer.is_of_same_type(type0, type1):
@@ -326,8 +371,10 @@ class STParser(Parser):
     @_('ext_id rel_op literal',
        'literal rel_op ext_id')
     def rel_expression(self, p):
-        self.lookup_id(p.ext_id, p.lineno)
-        # check here that type(literal)=type(ext_id)
+        ref = self.lookup_id(p.ext_id, p.lineno)
+        if not ref:
+            return (p[0], p[1], p[2])
+        
         type0 = self.typer.get_literal_type(p.literal)
         type1 = self.lookup_type(p.ext_id[0])
         if not self.typer.is_of_same_type(type0, type1):
@@ -336,7 +383,6 @@ class STParser(Parser):
     
     @_('literal rel_op literal')
     def rel_expression(self, p):
-        # check here that type(literal0)=type(literal1)
         type0 = self.typer.get_literal_type(p.literal0)
         type1 = self.typer.get_literal_type(p.literal1)
         if not self.typer.is_of_same_type(type0, type1):
@@ -380,14 +426,20 @@ class STParser(Parser):
 
     # Get arguments for multiple declarations
     def get_args(self, mandatory, optional: list, lineno):
-        args = [mandatory[0]]
-        self.lookup_array_length(mandatory, lineno)
+        if 'tuple' in str(type(mandatory[0])):
+            args = [mandatory[0][0]]
+        else:
+            args = [mandatory[0]]
+        self.lookup_array_length(mandatory[0], lineno)
         for arg in optional:
             if (arg):
                 for tok in arg:
                     var = tok[1]
+                    if 'tuple' in str(type(var)):
+                        args.append(var[0])
+                    else:
+                        args.append(var)
                     self.lookup_array_length(var, lineno)
-                    args.append(var[0])
         return args
     
     # Get multiple function parameters
@@ -457,24 +509,9 @@ class STParser(Parser):
 
     def lookup_array_length(self, ext_id, lineno):
         args = []
-        if (len(ext_id) > 1):
+        if ('tuple' in str(type(ext_id))):
             length = ext_id[1][1]
             if length[0] not in ['0','1','2','3','4','5','6','7','8','9']:
                 args.append(length)
         for arg in args:
             self.lookup(arg, lineno)
-
-
-if __name__ == "__main__":
-    lexer = STLexer()
-    
-    data = open("./samples/program.tiny").read()
-
-    s = lexer.tokenize(data)
-    s1 = lexer.tokenize(data)
-    td = {}
-    for t in s1:
-        td[t.index] = (t.type, t.value)
-    parser = STParser("./symbol_table.log", td)
-    p = parser.parse(s)
-    print (p)
