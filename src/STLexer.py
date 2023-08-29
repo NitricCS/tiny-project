@@ -22,7 +22,6 @@ class STLexer(Lexer):
     IF_KW = r'if'
     ELSE_KW = r'else'
     WHILE_KW = r'while'
-    #CONST_STR = r'".*?"|\'.*?\''
     CONST_NUMBER = r'\d+'
     CONST_CHAR = r'".?"|\'.?\''
 
@@ -77,7 +76,7 @@ if __name__ == "__main__":
     lexer = STLexer()
     
     s = lexer.tokenize(data)
-    
+
     # for tok in s:
     #     print('index=%r, type=%r, value=%r' % (tok.index, tok.type, tok.value))
     token_dict = {}

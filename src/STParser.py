@@ -29,22 +29,21 @@ class STParser(Parser):
             if self.token_dict[i][0] == 'IDENTIFIER':
                 i = self.get_prev_index(i)
                 if self.token_dict[i][0] == 'COMMA' or self.token_dict[i][0] == 'INT_KW' or self.token_dict[i][0] == 'FLOAT_KW' or self.token_dict[i][0] == 'CHAR_KW' or self.token_dict[i][0] == 'BOOL_KW':
-                    print ("Error in line " + str(p.lineno) +  ": Global variables are not allowed. Token: " + p.type)
+                    self.logger.log_syntax_error("global", p.lineno)
             self.errok()
             self.restart()
         elif p.type == 'INT_KW' or p.type == 'FLOAT_KW' or p.type == 'CHAR_KW' or p.type == 'BOOL_KW':
-            print("Error in line " + str(p.lineno) +  ": Declarations should be in the beginning. Token: " + p.type)
+            self.logger.log_syntax_error("init", p.lineno)
             self.errok()
             self.restart()
         elif p.type == 'ASSIGNMENT_OP':
-            i = self.get_prev_index(p.index)
-            i = self.get_prev_index(i)
+            i = self.get_prev_index(self.get_prev_index(p.index))
             if self.token_dict[i][0] == 'COMMA' or self.token_dict[i][0] == 'INT_KW' or self.token_dict[i][0] == 'FLOAT_KW' or self.token_dict[i][0] == 'CHAR_KW' or self.token_dict[i][0] == 'BOOL_KW':
-                print("Error in line " + str(p.lineno) +  ": Variables can't be initialized on declaration. Token: " + p.type)
+                self.logger.log_syntax_error("decl", p.lineno)
             self.errok()
             self.restart()
         else:
-            print ("Undefined syntax error in line " + str(p.lineno) + ". Token: " + p.type)
+            self.logger.log_syntax_error("generic", p.lineno)
             self.errok()
             self.restart()
     
@@ -60,9 +59,10 @@ class STParser(Parser):
     ### Grammar Description Below ###
     @_('functions')
     def program(self, p):
-        global_scope = self.symbol_table[0]
-        last_func = global_scope[len(global_scope)-1]
-        if 'main' not in last_func[1]:
+        global_scope = list(reversed(self.symbol_table[0]))
+        if len(global_scope) == 0:
+            self.logger.log_main_error()
+        elif 'main' not in global_scope[0][1]:
             self.logger.log_main_error()
         self.logger.save_scope(self.symbol_table.pop())
         self.logger.make_log()
@@ -83,6 +83,7 @@ class STParser(Parser):
         self.symbol_table.append([])
     @_('')
     def close_scope(self, p):
+        self.varvalues = {}
         self.logger.save_scope(self.symbol_table.pop())
     
     # Function parameters declaration
@@ -156,9 +157,8 @@ class STParser(Parser):
         if p[2][3] == "literal":
             type1 = self.typer.get_literal_type(p[2][0])
         self.varvalues[p.ext_id[0]] = p[2][4]
-        print (self.varvalues)
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)
+            self.logger.log_type_error(type0, type1, p.lineno)
 
     @_('ext_id ASSIGNMENT_OP rel_expression')
     def assignment(self, p):
@@ -169,25 +169,32 @@ class STParser(Parser):
         if p[2][3] == "literal":
             type1 = self.typer.get_literal_type(p[2][0])
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)
+            self.logger.log_type_error(type0, type1, p.lineno)
 
     @_('ext_id ASSIGNMENT_OP func_call')
     def assignment(self, p):
-        self.lookup_id(p.ext_id, p.lineno)
+        ref = self.lookup_id(p.ext_id, p.lineno)
+        if not ref:
+            return (p[0])
         type0 = self.lookup_type(p.ext_id[0])
         type1 = self.lookup_type(p.func_call[0])
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)
+            self.logger.log_type_error(type0, type1, p.lineno)
+        self.logger.log_warning_overflow("func", p.lineno)
+        return (p[0])
     
     @_('ext_id ASSIGNMENT_OP literal')
     def assignment(self, p):
-        self.lookup_id(p.ext_id, p.lineno)
+        ref = self.lookup_id(p.ext_id, p.lineno)
+        if not ref:
+            return (p[0], p[2])
         self.varvalues[p.ext_id[0]] = p.literal      # save value to hastable
         type0 = self.lookup_type(p.ext_id[0])
         type1 = self.typer.get_literal_type(p.literal)
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)
-        # check for overflows ???
+            self.logger.log_type_error(type0, type1, p.lineno)
+        return (p[0], p[2])
+        # check for overflows !!!
     
     @_('ext_id ASSIGNMENT_OP ext_id')
     def assignment(self, p):
@@ -198,8 +205,7 @@ class STParser(Parser):
         type0 = self.lookup_type(p.ext_id0[0])
         type1 = self.lookup_type(p.ext_id1[0])
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)
-        # check for overflows
+            self.logger.log_type_error(type0, type1, p.lineno)
     
     # Return statement
     @_('RETURN_KW literal',
@@ -208,13 +214,15 @@ class STParser(Parser):
         return ('return', p[1])
     
     # Function call
-    @_('IDENTIFIER LP ext_id [ { COMMA ext_id } ] RP')
+    @_('IDENTIFIER LP [ ext_id ] [ { COMMA ext_id } ] RP')
     def func_call(self, p):
         self.lookup(p.IDENTIFIER, p.lineno)
-        args = self.get_args(p[2], p[3], p.lineno)
-        for arg in args:
-            self.lookup(arg, p.lineno)
-        return (p[0], p[2], p[3])
+        if (p.ext_id0):
+            args = self.get_args(p[2], p[3], p.lineno)
+            for arg in args:
+                self.lookup(arg, p.lineno)
+            return (p[0], p[2], p[3])
+        return (p.IDENTIFIER, None, None)
     
     # Binary expressions
     @_('ext_id bin_op ext_id')
@@ -224,19 +232,23 @@ class STParser(Parser):
         type0 = self.lookup_type(p.ext_id0[0])
         type1 = self.lookup_type(p.ext_id1[0])
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)        
+            self.logger.log_type_error(type0, type1, p.lineno)
         # check for overflows
         try:
             value0 = self.varvalues[p.ext_id0[0]]
             value1 = self.varvalues[p.ext_id1[0]]
-            if self.typer.overflow_check(type0, value0, value1, p.bin_op):
-                print("Overflow in line " + str(p.lineno))
-                res = 0
+            if not (value0 == -1 or value1 == -1):
+                if self.typer.overflow_check(type0, value0, value1, p.bin_op):
+                    self.logger.log_overflow(type0, p.lineno)
+                    res = -1
+                else:
+                    res = self.typer.calculate(type0, value0, value1, p.bin_op)
             else:
-                res = self.typer.calculate(type0, value0, value1, p.bin_op)
+                self.logger.log_warning_overflow("dmg", p.lineno)
+                res = -1
         except KeyError:
-            print("Unable to check for overflow: variable uninitialized in line " + str(p.lineno))
-            res = 0
+            self.logger.log_warning_overflow("init", p.lineno)
+            res = -1
         return (p[0], p[1], p[2], 'var', res)
     
     @_('literal bin_op ext_id')
@@ -245,18 +257,22 @@ class STParser(Parser):
         type0 = self.typer.get_literal_type(p.literal)
         type1 = self.lookup_type(p.ext_id[0])
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)
+            self.logger.log_type_error(type0, type1, p.lineno)
         # check for overflows
         try:
             value = self.varvalues[p.ext_id[0]]
-            if self.typer.overflow_check(type0, value, p.literal, p.bin_op):
-                print("Overflow in line " + str(p.lineno))
-                res = 0
+            if not value == -1:
+                if self.typer.overflow_check(type0, value, p.literal, p.bin_op):
+                    self.logger.log_overflow(type0, p.lineno)
+                    res = -1
+                else:
+                    res = self.typer.calculate(type0, value, p.literal, p.bin_op)
             else:
-                res = self.typer.calculate(type0, value, p.literal, p.bin_op)
+                self.logger.log_warning_overflow("dmg", p.lineno)
+                res = -1
         except KeyError:
-            print("Unable to check for overflow: variable uninitialized in line " + str(p.lineno))
-            res = 0
+            self.logger.log_warning_overflow("init", p.lineno)
+            res = -1
         return (p[0], p[1], p[2], 'literal', res)
     
     @_('ext_id bin_op literal')
@@ -265,18 +281,22 @@ class STParser(Parser):
         type0 = self.typer.get_literal_type(p.literal)
         type1 = self.lookup_type(p.ext_id[0])
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)
+            self.logger.log_type_error(type0, type1, p.lineno)
         # check for overflows
         try:
             value = self.varvalues[p.ext_id[0]]
-            if self.typer.overflow_check(type0, value, p.literal, p.bin_op):
-                print("Overflow in line " + str(p.lineno))
-                res = 0
+            if not value == -1:
+                if self.typer.overflow_check(type0, value, p.literal, p.bin_op):
+                    self.logger.log_overflow(type0, p.lineno)
+                    res = 0
+                else:
+                    res = self.typer.calculate(type0, value, p.literal, p.bin_op)
             else:
-                res = self.typer.calculate(type0, value, p.literal, p.bin_op)
+                self.logger.log_warning_overflow("dmg", p.lineno)
+                res = -1
         except KeyError:
-            print("Unable to check for overflow: variable uninitialized in line " + str(p.lineno))
-            res = 0
+            self.logger.log_warning_overflow("init", p.lineno)
+            res = -1
         return (p[0], p[1], p[2], 'var', res)
     
     @_('literal bin_op literal')
@@ -284,10 +304,10 @@ class STParser(Parser):
         type0 = self.typer.get_literal_type(p.literal0)
         type1 = self.typer.get_literal_type(p.literal1)
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)
+            self.logger.log_type_error(type0, type1, p.lineno)
         # check for overflows
         if self.typer.overflow_check(type0, p.literal0, p.literal1, p.bin_op):
-            print("Overflow in line " + str(p.lineno))
+            self.logger.log_overflow(type0, p.lineno)
         res = self.typer.calculate(type0, p.literal0, p.literal1, p.bin_op)
         return (p[0], p[1], p[2], 'literal', res)
     
@@ -300,7 +320,7 @@ class STParser(Parser):
         type0 = self.lookup_type(p.ext_id0[0])
         type1 = self.lookup_type(p.ext_id1[0])
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)        
+            self.logger.log_type_error(type0, type1, p.lineno)
         return (p[0], p[1], p[2])
     
     @_('ext_id rel_op literal',
@@ -311,7 +331,7 @@ class STParser(Parser):
         type0 = self.typer.get_literal_type(p.literal)
         type1 = self.lookup_type(p.ext_id[0])
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)
+            self.logger.log_type_error(type0, type1, p.lineno)
         return (p[0], p[1], p[2])
     
     @_('literal rel_op literal')
@@ -320,7 +340,7 @@ class STParser(Parser):
         type0 = self.typer.get_literal_type(p.literal0)
         type1 = self.typer.get_literal_type(p.literal1)
         if not self.typer.is_of_same_type(type0, type1):
-            print ("Type error in line " + str(p.lineno) + ": operation on " + type0 + " and " + type1)
+            self.logger.log_type_error(type0, type1, p.lineno)
         return (p[0], p[1], p[2])
     
     # Operators
@@ -343,7 +363,7 @@ class STParser(Parser):
 
     @_('CONST_CHAR')
     def char_val(self, p):
-        return p.CONST_CHAR
+        return p.CONST_CHAR[1]
 
     @_('TRUE_KW', 'FALSE_KW')
     def bool_val(self, p):
@@ -432,8 +452,8 @@ class STParser(Parser):
             if index[0] not in ['0','1','2','3','4','5','6','7','8','9']:
                 args.append(index)
         for arg in args:
-            self.lookup(arg, lineno)
-            # Lookup method for extended ID
+            res = self.lookup(arg, lineno)
+        return res
 
     def lookup_array_length(self, ext_id, lineno):
         args = []

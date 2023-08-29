@@ -1,10 +1,12 @@
-int sum(int a[1]) {
-int c;
-return c;
+int sum() {
+    int c;
+    c = 2;
 }
 int main () {
-int x, y, z;
-float g, h;
-z = x + h;
-return 0;
+int b, c;
+bool x;
+a = 65535;
+b = 2;
+b = sum(a);
+return c;
 }

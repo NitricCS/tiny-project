@@ -44,7 +44,18 @@ class TinyTyping():
                     if float(value1) / float(value2) < 1.175494351e-38:
                         return True
             case "char":
-                pass
+                if operator == "+":
+                    if ord(value1) + ord(value2) > 255:
+                        return True
+                if operator == "-":
+                    if ord(value1) - ord(value2) < 32:
+                        return True
+                if operator == "*":
+                    if ord(value1) * ord(value2) > 255:
+                        return True
+                if operator == "/":
+                    if int(ord(value1) / ord(value2)) < 32:
+                        return True
         return False
     
     def calculate(self, vartype, value1, value2, operator):
@@ -68,5 +79,12 @@ class TinyTyping():
                 if operator == "/":
                     return float(value1) / float(value2)
             case "char":
-                pass
+                if operator == "+":
+                    return chr(ord(value1) + ord(value2))
+                if operator == "-":
+                    return chr(ord(value1) - ord(value2))
+                if operator == "*":
+                    return chr(ord(value1) * ord(value2))
+                if operator == "/":
+                    return chr(int(ord(value1) / ord(value2)))
         return -1
