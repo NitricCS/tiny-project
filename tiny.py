@@ -8,12 +8,9 @@ from src.STLexer import STLexer
 from src.STParser import STParser
 from src.cli_parser import cli
 
-import sys
-sys.stderr = open('D:\\err.txt', 'w')
-
 if __name__ == "__main__":
     args = cli()
-
+    print("Hello", args)
     data = open(args).read()
     lexer = STLexer()
 
