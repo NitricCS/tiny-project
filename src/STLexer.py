@@ -69,16 +69,3 @@ class STLexer(Lexer):
     @_(r'\n+')
     def ignore_newline(self, t):
         self.lineno += len(t.value)
-
-if __name__ == "__main__":
-    data = open("./samples/program.tiny").read()
-    lexer = STLexer()
-    
-    s = lexer.tokenize(data)
-
-    # for tok in s:
-    #     print('index=%r, type=%r, value=%r' % (tok.index, tok.type, tok.value))
-    token_dict = {}
-    for tok in s:
-        token_dict[tok.index] = (tok.type, tok.value)
-    print(token_dict)

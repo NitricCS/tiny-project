@@ -32,6 +32,7 @@ class STLogger():
         new_log = "ERROR: Duplicate declaration of reference \"" + variable + "\" in current scope (line " + str(line) + ")\n"
         self.err_log = self.err_log + new_log
     
+    # Syntax error logging
     def log_syntax_error(self, error_type, line):
         match error_type:
             case "global":
@@ -42,20 +43,26 @@ class STLogger():
                 new_log = "Syntax error in line " + str(line) + ": Variable declarations should be made in the beginning of each function\n"
             case "generic":
                 new_log = "Syntax error in line " + str(line) + ": Undefined error\n"
+            case "eof":
+                new_log = "Syntax error at the end of file\n"
         self.err_log = self.err_log + new_log
     
+    # Type error logging
     def log_type_error(self, type1, type2, line):
         new_log = "Type error in line " + str(line) + ": Operation on " + type1 + " and " + type2 + "\n"
         self.err_log = self.err_log + new_log
     
+    # Type error logging for boolean assignment
     def log_type_error_rel(self, vartype, line):
         new_log = "Type error in line " + str(line) + ": Boolean operation result can't be assigned to \"" + vartype + "\".\n"
         self.err_log = self.err_log + new_log
     
+    # Overflow error logging
     def log_overflow(self, type, line):
         new_log = "Type \"" + type + "\" overflow in line " + str(line) + "\n"
         self.err_log = self.err_log + new_log
     
+    # Overflow warnings
     def log_warning_overflow(self, warning_type, line):
         match warning_type:
             case "init":
@@ -66,29 +73,38 @@ class STLogger():
                 new_log = "WARNING: Unable to check for overflows in line " + str(line) + ". Overflows not checked for function calls.\n"
         self.wrn_log = self.wrn_log + new_log
 
+    # Improper main declaration
     def log_main_error(self):
         new_log = "ERROR: main() function isn't declared or isn't last\n"
         self.err_log = self.err_log + new_log
     
+    # Log saving method
     def make_log(self):
         f = open(self.path, "w", encoding="utf-8")
-        for scope in self.table_ostream:
-            txt = str(scope) + "\n"
-            f.write(txt)
-        f.write("\n")
 
+        # Error output and cli print
         if self.err_log:
             f.write(self.err_log)
             print(self.err_log)
             f.write("\n")
 
+        # Warnings output and cli print
         if self.wrn_log:
             f.write(self.wrn_log)
             print(self.wrn_log)
             f.write("\n")
+        
+        # Symbol table scopes output
+        for scope in self.table_ostream:
+            f.write("Symbol table:\n")
+            txt = str(scope) + "\n"
+            f.write(txt)
+        f.write("\n")
 
+        # Positive cli echo
         if not self.err_log and not self.wrn_log:
             print("No errors found")
         
+        # Name resolution table output
         f.write(tabulate(self.resolution_table, headers=["Line", "Ref", "Decl"]))
         f.close()

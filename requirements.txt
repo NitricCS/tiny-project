@@ -1,3 +1,2 @@
-argparse
 sly>=0.4
 tabulate

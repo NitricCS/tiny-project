@@ -5,11 +5,15 @@
 
 from src.STLexer import STLexer
 from src.STParser import STParser
-from src.cli_parser import cli
+from sys import exit
 
 if __name__ == "__main__":
-    args = cli()
-    data = open(args).read()
+    try:
+        data = open("./code/program.tiny").read()
+    except FileNotFoundError:
+        print("Code file not found. Please place your program code into \'/code/program.tiny\'.")
+        exit()
+
     lexer = STLexer()
 
     tokens = lexer.tokenize(data)              # tokens for parser
