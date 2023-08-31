@@ -15,11 +15,15 @@ Additionally, failed type check and failed overflow check will mark involved var
 
 ## Parser
 The parser in this project, like the lexer, is based on [SLY](https://github.com/dabeaz/sly).\
-Although the SLY project active development has been stopped, even older versions provide a good base for program parsing.
+Although the SLY project active development has stopped, even older versions provide a good base for program parsing.
 
-The parser contains the Tiny grammar nonterminals combined from tokens received from the lexer. Grammar rules include special methods that are invoked immediately when a nonterminal matching that rule is detected by the parser.\
+The Tiny code is parsed according to the task in the PDF. Any variations or additional symbols not described there will trigger a syntax error.\
+__Comments are not allowed__ and will also trigger a syntax error.
+
+The parser contains the Tiny grammar nonterminals. Grammar rules include special methods that are invoked immediately when a nonterminal matching that rule is detected by the parser.\
 Those methods contain name resolution and typing logic steps triggered one after another as mentioned above.
 
+## Error Handling
 The parser also contains an *error()* method that is handling syntax errors it runs into. The following syntax errors are defined:
 * global variable declaration
 * declaration done in the wrong part of a function

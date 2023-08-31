@@ -6,11 +6,19 @@ You can checkout the repo directly: https://github.com/NitricCS/tiny-project.git
 
 The project uses a SLY-based symbol table project as a base: https://github.com/NitricCS/symbol-table-sly
 
+## Description
+* [Main logic](./docs/main_logic.md)
+* [Lexer](./docs/lexer.md)
+* [Type system methods](./docs/typing.md)
+* [Logger](./docs/logger.md)
+
 ## Installation and Usage
 There are two options to run the project on your local machine, both with up- and downsides.
-### Using Docker
+
+The _./code_ folder contains sample programs that can be used as test inputs. Those programs are taken from the task PDF.
+### Option 1: Using Docker
 * __Pro__: Will definitely run regardless of your system parameters.
-* __Con__: Requires rebuilding a docker image __every time you need to change the input__ (tiny code).
+* __Con__: Requires rebuilding a docker image __every time you need to change the input__ (tiny code).\
 You'll need to have [docker](https://www.docker.com/) on your device to build and run the solution.
 
 The steps you'll need to take:
@@ -21,9 +29,9 @@ Docker will create an image based on a dockerfile that's already included.
 3. When the image is created, simply run ``docker run tiny``\
 Any errors or warnings will be displayed in the terminal.
 
-If you want to run the solution with a different input (another Tiny program), you have to repeat everything from step 1. Rebuilding docker image is necessary because Docker doesn't allow direct references to a host's filesystem.
+If you want to run the solution with a different input (another Tiny program), you have to repeat everything from step 1. Rebuilding docker image is necessary because Docker doesn't allow direct references to a host's filesystem.
 
-### Using Python Virtual Environment
+### Option 2: Using Python Virtual Environment
 * __Pro__: You'll be able to conveniently change the input.
 * __Con__: You need Python installed on your system.
 
@@ -37,12 +45,7 @@ This will create a virtual environment for this project. This will ensure the de
 ``python -m pip install -r requirements.txt``
 4. Now you can run the project:\
 ``tiny.py SOURCE_FILE``\
-__SOURCE_FILE__ is a path to your Tiny code file. The path can be relative or absolute.
+__SOURCE_FILE__ is a path to your Tiny code file. The path can be relative or absolute. For example:
+``tiny.py ./code/valid1.tiny``
 
 If you want to run the solution with a different input, you can just change the code in your _SOURCE_FILE_ or use another file path as a command argument.
-
-## Documentation
-* [Main logic](./docs/main_logic.md)
-* [Lexer](./docs/lexer.md)
-* [Type system methods](./docs/typing.md)
-* [Logger](./docs/logger.md)
