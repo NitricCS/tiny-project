@@ -1,5 +1,5 @@
 FROM python:3.11 as compiler
-ADD tiny.py .
+ADD tiny-docker.py .
 
 WORKDIR /app/
 
@@ -15,4 +15,4 @@ COPY --from=compiler /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 COPY . /app/
 
-ENTRYPOINT [ "python", "./tiny.py" ]
+ENTRYPOINT [ "python", "./tiny-docker.py" ]

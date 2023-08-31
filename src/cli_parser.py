@@ -15,13 +15,13 @@ def cli():
     args = parse_arguments()
 
     abs_src = os.path.abspath(args.src_file)
-    # if not os.path.exists(abs_src):
-    #     print("Specified source file path " + abs_src + " is invalid or doesn't exist.\nPlease try again with a valid source.")
-    #     sys.exit()
+    if not os.path.exists(abs_src):
+        print("Specified source file path " + abs_src + " is invalid or doesn't exist.\nPlease try again with a valid source.")
+        sys.exit()
     l = len(abs_src)
     if abs_src[l-4:] != 'tiny':
         print("Source file path " + abs_src + " should be of type .tiny")
         sys.exit()
-    src = args.src_file
+    src = abs_src
 
     return src

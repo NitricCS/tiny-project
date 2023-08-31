@@ -6,22 +6,42 @@ You can checkout the repo directly: https://github.com/NitricCS/tiny-project.git
 
 The project uses a SLY-based symbol table project as a base: https://github.com/NitricCS/symbol-table-sly
 
-### Installation
-You'll need to have docker on your device to build and run the solution.
+## Installation and Usage
+There are two options to run the project on your local machine, both with up- and downsides.
+### Using Docker
+* __Pro__: Will definitely run regardless of your system parameters.
+* __Con__: Requires rebuilding a docker image __every time you need to change the input__ (tiny code).
+You'll need to have [docker](https://www.docker.com/) on your device to build and run the solution.
 
-Once you have docker up and running, navigate to this project folder with your terminal and run:\
+The steps you'll need to take:
+1. Place your input (_Tiny_ code file) in __./code/program.tiny__. It is important to do it before taking the next steps.
+2. Navigate to this project folder with your terminal and run:\
 ``docker build -t tiny .``\
-Docker will create an image based on a dockerfile in this project. This will omit potential dependencies conflicts, although this project doesn't have a lot of them.
+Docker will create an image based on a dockerfile that's already included.
+3. When the image is created, simply run ``docker run tiny``\
+Any errors or warnings will be displayed in the terminal.
 
-### Usage
-The input file with the Tiny code should be placed into _./code/program.tiny_.\
-Unfortunately, docker doesn't allow simple references to the host filesystem, thus, the input file has to have a fixed location.
+If you want to run the solution with a different input (another Tiny program), you have to repeat everything from step 1. Rebuilding docker image is necessary because Docker doesn't allow direct references to a host's filesystem.
 
-When the image is created, simply run ``docker run tiny``\
-Any errors or warnings will be displayed in the terminal.\
-Additionally, an __output.log__ file will be created. It will contain symbol table scopes and a variable resolution table.
+### Using Python Virtual Environment
+* __Pro__: You'll be able to conveniently change the input.
+* __Con__: You need Python installed on your system.
 
-### Documentation
+The steps you'll need to take:
+1. Navigate to this project folder with your terminal and run:\
+``python -m venv venv``\
+This will create a virtual environment for this project. This will ensure the dependencies don't conflict with your system.
+2. Then activate the environment:\
+``venv/Scripts/activate``
+3. Install dependencies into this environment. They __won't__ change your host system!\
+``python -m pip install -r requirements.txt``
+4. Now you can run the project:\
+``tiny.py SOURCE_FILE``\
+__SOURCE_FILE__ is a path to your Tiny code file. The path can be relative or absolute.
+
+If you want to run the solution with a different input, you can just change the code in your _SOURCE_FILE_ or use another file path as a command argument.
+
+## Documentation
 * [Main logic](./docs/main_logic.md)
 * [Lexer](./docs/lexer.md)
 * [Type system methods](./docs/typing.md)

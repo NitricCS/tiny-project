@@ -1,6 +1,7 @@
 # Parser and type system for the Tiny language
 #
-# CLI run file, takes a srouce file path argument
+# Docker entry point
+# This option doesn't use the CLI arg and can only work with fixed input
 #
 # Latest version on https://github.com/NitricCS/tiny-project
 # Kirill Borisov, 108144, Uni Passau
@@ -8,11 +9,13 @@
 from src.STLexer import STLexer
 from src.STParser import STParser
 from sys import exit
-from src.cli_parser import cli
 
 if __name__ == "__main__":
-    args = cli()
-    data = open(args).read()
+    try:
+        data = open("./code/program.tiny").read()
+    except FileNotFoundError:
+        print("Code file not found. Please place your program code into \'/code/program.tiny\'.")
+        exit()
 
     lexer = STLexer()
 
