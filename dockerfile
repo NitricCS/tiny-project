@@ -1,4 +1,4 @@
-FROM python:3.11.5-bullseye as compiler
+FROM python:3.11.5-slim-bullseye as compiler
 ADD tiny-docker.py .
 
 WORKDIR /app/
@@ -8,7 +8,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY ./requirements.txt /app/requirements.txt
 RUN pip install -r requirements.txt
 
-FROM python:3.11.5-bullseye as runner
+FROM python:3.11.5-slim-bullseye as runner
 WORKDIR /app/
 COPY --from=compiler /opt/venv /opt/venv
 
