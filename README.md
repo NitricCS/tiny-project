@@ -29,7 +29,8 @@ Docker will create an image based on a dockerfile that's already included.
 3. When the image is created, simply run ``docker run tiny``\
 Any errors or warnings will be displayed in the terminal.
 
-If you want to run the solution with a different input (another Tiny program), you have to repeat everything from step 1. Rebuilding docker image is necessary because Docker doesn't allow direct references to a host's filesystem.
+If you want to run the solution with a different input (another Tiny program), you have to repeat everything from step 1. Rebuilding docker image is necessary because Docker doesn't allow direct references to a host's filesystem.\
+For the same reason, this run option will not generate an _output.log_ file and will only report errors in the terminal.
 
 ### Option 2: Using Python Virtual Environment
 * __Pro__: You'll be able to conveniently change the input.
@@ -44,8 +45,8 @@ This will create a virtual environment for this project. This will ensure the de
 3. Install dependencies into this environment. They __won't__ change your host system!\
 ``python -m pip install -r requirements.txt``
 4. Now you can run the project:\
-``tiny.py SOURCE_FILE``\
+``python tiny.py SOURCE_FILE``\
 __SOURCE_FILE__ is a path to your Tiny code file. The path can be relative or absolute. For example:
-``tiny.py ./code/valid1.tiny``
+``python tiny.py ./code/valid1.tiny``
 
 If you want to run the solution with a different input, you can just change the code in your _SOURCE_FILE_ or use another file path as a command argument.

@@ -95,8 +95,8 @@ class STLogger():
             f.write("\n")
         
         # Symbol table scopes output
+        f.write("Symbol table:\n")
         for scope in self.table_ostream:
-            f.write("Symbol table:\n")
             txt = str(scope) + "\n"
             f.write(txt)
         f.write("\n")
