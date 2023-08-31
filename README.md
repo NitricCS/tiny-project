@@ -9,15 +9,15 @@ The project uses a SLY-based symbol table project as a base: https://github.com/
 ### Installation
 You'll need to have docker on your device to build and run the solution.
 
-Once you have docker up and running, navigate to this project folder with your terminal and run:
-``docker build -t tiny .``
+Once you have docker up and running, navigate to this project folder with your terminal and run:\
+``docker build -t tiny .``\
 Docker will create an image based on a dockerfile in this project. This will omit potential dependencies conflicts, although this project doesn't have a lot of them.
 
 ### Usage
 The input file with the Tiny code should be placed into _./code/program.tiny_.\
 Unfortunately, docker doesn't allow simple references to the host filesystem, thus, the input file has to have a fixed location.
 
-When the image is created, simply run ``docker run tiny``.\
+When the image is created, simply run ``docker run tiny``\
 Any errors or warnings will be displayed in the terminal.\
 Additionally, an __output.log__ file will be created. It will contain symbol table scopes and a variable resolution table.
 
