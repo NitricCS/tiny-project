@@ -46,7 +46,7 @@ This will create a virtual environment for this project. This will ensure the de
 ``python -m pip install -r requirements.txt``
 4. Now you can run the project:\
 ``python tiny.py SOURCE_FILE``\
-__SOURCE_FILE__ is a path to your Tiny code file. The path can be relative or absolute. For example:
+__SOURCE_FILE__ is a path to your Tiny code file. The path can be relative or absolute. For example:\
 ``python tiny.py ./code/valid1.tiny``
 
 If you want to run the solution with a different input, you can just change the code in your _SOURCE_FILE_ or use another file path as a command argument.
