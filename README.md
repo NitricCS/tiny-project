@@ -6,14 +6,23 @@ You can checkout the repo directly: https://github.com/NitricCS/tiny-project.git
 
 The project uses a SLY-based symbol table project as a base: https://github.com/NitricCS/symbol-table-sly
 
+### Installation
+You'll need to have docker on your device to build and run the solution.
+
+Once you have docker up and running, navigate to this project folder with your terminal and run:
+``docker build -t tiny .``
+Docker will create an image based on a dockerfile in this project. This will omit potential dependencies conflicts, although this project doesn't have a lot of them.
+
 ### Usage
-To run the solution, navigate to its directory and execute ``tiny.py SOURCE_FILE``.\
-*SOURCE_FILE* can be a relative or absolute path to your file, but the file itself should only contain code and have a **.tiny** extension.
+The input file with the Tiny code should be placed into _./code/program.tiny_.\
+Unfortunately, docker doesn't allow simple references to the host filesystem, thus, the input file has to have a fixed location.
 
-Syntax errors, type errors and basic overflows will be reported in your terminal.
+When the image is created, simply run ``docker run tiny``.\
+Any errors or warnings will be displayed in the terminal.\
+Additionally, an __output.log__ file will be created. It will contain symbol table scopes and a variable resolution table.
 
-The solution will also generate an _output.log_ file in the root directory. It will contain the symbol table stack elements in the order of them being popped during the parsing, errors, and the resolution table for all references in code.
-
-### Requirements
-The solution requires SLY for Python to be installed.\
-You can make sure your system meets the requirements by running ``pip install -r requirements.txt``.
+### Documentation
+* [Main logic](./docs/main_logic.md)
+* [Lexer](./docs/lexer.md)
+* [Type system methods](./docs/typing.md)
+* [Logger](./docs/logger.md)
